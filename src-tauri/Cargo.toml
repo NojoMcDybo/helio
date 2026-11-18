@@ -1,0 +1,37 @@
+[package]
+name = "helio"
+version = "0.13.0"
+description = "Helio - Live-Puls vom Amazfit Helio Strap"
+authors = ["Nojo"]
+edition = "2021"
+
+[lib]
+name = "helio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-updater = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+btleplug = "0.13.3"
+futures = "0.3.34"
+uuid = "1.26.1"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+tokio = { version = "1.53.1", features = ["time", "macros", "net", "io-util"] }
+
+[target.'cfg(windows)'.dependencies]
+# schon über Tauri im Lockfile; für GetLocalTime (mcp.rs)
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_SystemInformation"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

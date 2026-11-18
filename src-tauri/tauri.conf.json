@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Helio",
+  "version": "0.13.0",
+  "identifier": "de.nojo.helio",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1430",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Helio",
+        "width": 440,
+        "height": 760,
+        "minWidth": 380,
+        "minHeight": 560,
+        "decorations": false,
+        "transparent": false,
+        "backgroundColor": "#1c1c1e",
+        "visible": false,
+        "center": true
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFCRjZEODM0MzVBQjU4MjYKUldRbVdLczFOTmoycTlIeEIzNEt5NHZ3aXU1RGZFcUI3NCtSWFRoSE01NE9ZM2x6bU0ybjFXeXoK",
+      "endpoints": ["https://github.com/NojoMcDybo/helio/releases/latest/download/latest.json"],
+      "windows": { "installMode": "passive" }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": ["nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"]
+  }
+}

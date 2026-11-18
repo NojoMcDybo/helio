@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Helio</title>
+    <link rel="stylesheet" href="/src/nojo/nojo-ui.css" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/main.tsx" defer></script>
+  </head>
+  <body class="n-window">
+    <!-- rahmenloses Fenster: oben ziehen; Status links und Fensterknoepfe rechts als Glas (wie Folio) -->
+    <div class="n-dragbar" data-tauri-drag-region></div>
+    <div class="status n-glass n-liquid" data-tauri-drag-region>
+      <span class="dot" id="dot"></span><span id="state" data-tauri-drag-region>…</span>
+    </div>
+
+    <!-- Inhalt: React (src/main.tsx) -->
+    <main id="main"></main>
+  </body>
+</html>
