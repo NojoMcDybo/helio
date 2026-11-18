@@ -35,8 +35,7 @@ sonst landen Programm und AppData im virtualisierten Paketordner).
 
 Helio aktualisiert sich selbst: 20 s nach dem Start und dann alle 6 h fragt es `https://github.com/NojoMcDybo/helio/releases/latest/download/latest.json`. Gibt es eine neue Version, erscheint oben ein Banner mit **Installieren** (lädt, prüft die Signatur mit dem öffentlichen Schlüssel aus `tauri.conf.json`, derselbe wie bei Arena, Notch und Streamdock, und startet neu). Auf der Seite Quellen steht die Version mit „Nach Updates suchen“. Solange es Repository oder Release nicht gibt, bleibt die automatische Prüfung still.
 
-Veröffentlichen: Version in `package.json`, `src-tauri/Cargo.toml` und `src-tauri/tauri.conf.json` erhöhen, committen, Tag `v<version>` pushen. `.github/workflows/release.yml` testet, baut, signiert (Secret `TAURI_SIGNING_PRIVATE_KEY`, der private Schlüssel liegt nur unter `%USERPROFILE%\.tauri
-ojo-updater.key`) und hängt Installer und `latest.json` an das Release. **Einmalig:** Repository `NojoMcDybo/helio` anlegen und das Secret setzen. Ein lokal gebauter Installer hat keine Signatur: er taugt zum Installieren, nicht als Update.
+Veröffentlichen: Version in `package.json`, `src-tauri/Cargo.toml` und `src-tauri/tauri.conf.json` erhöhen, committen, Tag `v<version>` pushen. `.github/workflows/release.yml` testet, baut, signiert (Secret `TAURI_SIGNING_PRIVATE_KEY`, der private Schlüssel liegt nur unter `%USERPROFILE%\.tauri\nojo-updater.key`) und hängt Installer und `latest.json` an das Release. **Einmalig:** Repository `NojoMcDybo/helio` anlegen und das Secret setzen. Ein lokal gebauter Installer hat keine Signatur: er taugt zum Installieren, nicht als Update.
 
 ## Daten
 
