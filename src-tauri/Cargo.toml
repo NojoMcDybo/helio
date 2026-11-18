@@ -1,6 +1,6 @@
 [package]
 name = "helio"
-version = "0.13.0"
+version = "0.13.1"
 description = "Helio - Live-Puls vom Amazfit Helio Strap"
 authors = ["Nojo"]
 edition = "2021"
