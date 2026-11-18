@@ -14,10 +14,10 @@ export function startLights(field: HTMLElement, stage: HTMLElement, scroller: HT
   const pick = () => {
     const page = activePage();
     if (!page) return [] as { el: HTMLElement; k: number; c: string }[];
-    const tagged = [...page.querySelectorAll<HTMLElement>("[data-light]")];
+    const tagged = [...page.querySelectorAll<HTMLElement>("[data-light]")].filter((el) => el.offsetParent);
     const list = tagged.length
       ? tagged.map((el) => ({ el, k: Number(el.dataset.light) || 0.3, c: el.dataset.lc || "#b79ad0" }))
-      : [...page.querySelectorAll<HTMLElement>(".lg")].slice(0, 4).map((el, i) => ({ el, k: 0.7 - i * 0.15, c: getComputedStyle(el).getPropertyValue("--hue").trim() || "#b79ad0" }));
+      : [...page.querySelectorAll<HTMLElement>(".lg")].filter((el) => el.offsetParent).slice(0, 4).map((el, i) => ({ el, k: 0.7 - i * 0.15, c: getComputedStyle(el).getPropertyValue("--hue").trim() || "#b79ad0" }));
     return list.sort((a, b) => b.k - a.k).slice(0, 6);
   };
 

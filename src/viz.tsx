@@ -149,19 +149,21 @@ const FONT: Record<string, string> = {
 export function Dm({ text, h = 34, label }: { text: string; h?: number; label?: string }) {
   let x = 0;
   const dots: ReactNode[] = [];
+  // --d: Verzögerung je Punkt (von links nach rechts), damit sich die Ziffern beim Erscheinen aufbauen (plate.css, dot-on)
+  const add = (cx: number, cy: number, r: number) => dots.push(<circle key={dots.length} cx={cx} cy={cy} r={r} style={{ ["--d" as string]: `${Math.round(cx * 16 + cy * 5)}ms` }} />);
   for (const ch of text) {
     if (ch === ":" || ch === "." || ch === ",") {
-      dots.push(<circle key={dots.length} cx={x + 1} cy={ch === ":" ? 2 : 6} r={0.38} />);
-      if (ch === ":") dots.push(<circle key={dots.length} cx={x + 1} cy={5} r={0.38} />);
+      add(x + 1, ch === ":" ? 2 : 6, 0.38);
+      if (ch === ":") add(x + 1, 5, 0.38);
       x += 2.2; continue;
     }
     if (ch === " ") { x += 3; continue; }
     const g = FONT[ch];
     if (!g) continue;
-    g.split(" ").forEach((r, y) => [...r].forEach((b, i) => { if (b === "1") dots.push(<circle key={dots.length} cx={x + i + 0.5} cy={y + 0.5} r={0.4} />); }));
+    g.split(" ").forEach((r, y) => [...r].forEach((b, i) => { if (b === "1") add(x + i + 0.5, y + 0.5, 0.4); }));
     x += 6;
   }
-  return <svg className="dm" viewBox={`0 0 ${x} 7`} style={{ height: h, aspectRatio: `${x} / 7` }} role="img" aria-label={label ?? text}>{dots}</svg>;
+  return <svg key={text} className="dm" viewBox={`0 0 ${x} 7`} style={{ height: h, aspectRatio: `${x} / 7` }} role="img" aria-label={label ?? text}>{dots}</svg>;
 }
 
 /// Schlaf auf dem 24-Stunden-Ring (oben = Mitternacht): Bogen von Einschlafen bis Aufwachen, übliche Zeiten als Strichpunkte.
@@ -195,6 +197,25 @@ export function RangeRail({ min, max, value, lo, hi, label }: { min: number; max
 }
 
 /// Verlauf als Linie (Lücken bleiben Lücken), letzter Wert als Marke.
+/// Verlauf mit üblichem Band (und Median gestrichelt). mini = Kachelgröße ohne Beschriftung, sonst für die Einzelansicht.
+export function BandChart({ series, lo, hi, median, mini, label }: { series: (number | null)[]; lo?: number; hi?: number; median?: number; mini?: boolean } & Svg) {
+  const vals = series.filter((v): v is number => v != null), n = series.length;
+  if (vals.length < 2) return null;
+  const w = mini ? 240 : 560, h = mini ? 56 : 200, p = mini ? 4 : 8;
+  const [a, b] = range(lo != null && hi != null ? [...vals, lo, hi] : vals, 0.1);
+  const x = (i: number) => p + (i / Math.max(1, n - 1)) * (w - 2 * p), y = (v: number) => h - p - ((v - a) / (b - a || 1)) * (h - 2 * p);
+  const d = series.reduce<string>((s, v, i) => (v == null ? s : s + (i && series[i - 1] != null ? "L" : "M") + `${x(i).toFixed(1)} ${y(v).toFixed(1)}`), "");
+  const li = n - 1 - [...series].reverse().findIndex((v) => v != null);
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className={"viz band-chart" + (mini ? " mini" : "")} role="img" aria-label={label}>
+      {lo != null && hi != null && <rect className="bc-band" x={0} width={w} y={y(hi)} height={Math.max(2, y(lo) - y(hi))} rx={mini ? 3 : 6} />}
+      {!mini && median != null && <line className="bc-med" x1={0} x2={w} y1={y(median)} y2={y(median)} />}
+      <path d={d} className="bc-line" />
+      <circle cx={x(li)} cy={y(series[li] as number)} r={mini ? 3 : 5} className="mk" />
+    </svg>
+  );
+}
+
 export function LineSpark({ series, w = 260, h = 60, label }: { series: (number | null)[]; w?: number; h?: number; label: string }) {
   const vals = series.filter((v): v is number => v != null);
   if (vals.length < 2) return null;
