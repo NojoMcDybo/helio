@@ -27,7 +27,7 @@ const BLE: Record<string, string> = { start: "startet", suche: "sucht Band", ver
 
 function Tile({ name, ok, detail, children }: { name: string; ok: boolean; detail: string; children?: React.ReactNode }) {
   return (
-    <article className={"source-tile n-card" + (ok ? " ok" : "")}>
+    <article className={"source-tile n-card lg" + (ok ? " ok" : "")}>
       <i className="source-dot" aria-hidden="true" />
       <div>
         <b>{name}</b>
@@ -100,7 +100,7 @@ export function Sources() {
       {error && <p className="fine warn" role="alert">{error}</p>}
 
       {!!h?.types.length && (
-        <details className="more n-card">
+        <details className="more n-card lg">
           <summary>Was aus Apple Health ankommt</summary>
           <table>
             <tbody>

@@ -23,7 +23,7 @@ export function Pulse() {
         <div className="zone" id="zone"></div>
       </section>
 
-      <section className="n-card live-card">
+      <section className="n-card lg live-card">
         <canvas id="live"></canvas>
       </section>
 
@@ -40,12 +40,12 @@ export function Pulse() {
           <button className="n-ico sm n-glass n-liquid" id="next" title="Nächster Tag"></button>
         </nav>
         <div className="tiles">
-          <div className="n-card tile" data-mark="rest"><b id="s-rest" className="n-num">–</b><span>Ruhe</span></div>
-          <div className="n-card tile" data-mark="avg"><b id="s-avg" className="n-num">–</b><span>Ø</span></div>
-          <div className="n-card tile" data-mark="min" title="Zeigen: wann"><b id="s-min" className="n-num">–</b><span>Min</span></div>
-          <div className="n-card tile" data-mark="max" title="Zeigen: wann"><b id="s-max" className="n-num">–</b><span>Max</span></div>
+          <div className="n-card lg tile" data-mark="rest"><b id="s-rest" className="n-num">–</b><span>Ruhe</span></div>
+          <div className="n-card lg tile" data-mark="avg"><b id="s-avg" className="n-num">–</b><span>Ø</span></div>
+          <div className="n-card lg tile" data-mark="min" title="Zeigen: wann"><b id="s-min" className="n-num">–</b><span>Min</span></div>
+          <div className="n-card lg tile" data-mark="max" title="Zeigen: wann"><b id="s-max" className="n-num">–</b><span>Max</span></div>
         </div>
-        <div className="n-card chart">
+        <div className="n-card lg chart">
           <canvas id="daychart"></canvas>
           <div className="tip n-glass n-liquid" id="tip"></div>
         </div>

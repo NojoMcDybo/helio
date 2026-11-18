@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { GROUPS, QUALITY } from "./metrics";
+import { ClockDial, StageBar } from "./viz";
 
 // Seite „Tage“: die Tagesmatrix eines Tages (daily.rs), gruppiert, mit Quelle und Datenqualität.
 // Nur beschreibend: Werte so, wie sie aus Health kommen, ohne Bewertung.
@@ -14,6 +15,27 @@ const addDays = (day: string, n: number) => {
 };
 const longDate = (day: string) =>
   new Date(`${day}T12:00:00`).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+
+/// Bei Schlaf stehen die Zahlen hinter „Werte“: das Bild zeigt das Wichtige.
+const Wrap = ({ fold, children }: { fold: boolean; children: React.ReactNode }) => (fold ? <details className="hint-i"><summary>Werte</summary>{children}</details> : <>{children}</>);
+
+/// Schlaf als Bild: Fenster auf dem 24-h-Ring (Einschlafen = Marke, Aufwachen = Ring-Marke) und die Phasen als Balken.
+function SleepViz({ get }: { get: (k: string) => number | undefined }) {
+  const onset = get("onset"), wake = get("wake"), deep = get("deep_min") ?? 0, core = get("core_min") ?? 0, rem = get("rem_min") ?? 0, awake = get("awake_min") ?? 0;
+  const stages = deep + core + rem + awake > 0;
+  if (onset == null && wake == null && !stages) return null;
+  return (
+    <div className="sleep-viz">
+      {onset != null && wake != null
+        ? <ClockDial label="Schlaffenster auf dem 24-Stunden-Ring" spans={[{ from: onset, to: wake }]} dots={[{ v: onset }, { v: wake, kind: "alt" }]} />
+        : <span />}
+      {stages && (
+        <StageBar deep={deep} core={core} rem={rem} awake={awake}
+          label={`Schlafphasen: tief ${Math.round(deep)} min, Kern ${Math.round(core)} min, REM ${Math.round(rem)} min, wach ${Math.round(awake)} min`} />
+      )}
+    </div>
+  );
+}
 
 export function Days() {
   const [range, setRange] = useState<[string, string] | null>(null);
@@ -80,9 +102,10 @@ export function Days() {
       {rows && !groups.length && <p className="fine">Für diesen Tag liegen keine Werte vor.</p>}
 
       {groups.map((g) => (
-        <article key={g.title} className="day-group n-card" data-g={g.g}>
+        <article key={g.title} className="day-group n-card lg" data-g={g.g}>
           <div className="n-eyebrow">{g.title}</div>
-          <table>
+          {g.g === "sleep" && <SleepViz get={(k) => byKey.get(k)?.value} />}
+          <Wrap fold={g.g === "sleep"}><table>
             <tbody>
               {g.items.map(([k, label, show]) => {
                 const m = byKey.get(k)!;
@@ -95,14 +118,17 @@ export function Days() {
                 );
               })}
             </tbody>
-          </table>
+          </table></Wrap>
         </article>
       ))}
-      <p className="fine">
-        Je Kennzahl zählt eine Quelle; Schritte, Strecke, Energie und Essen werden je Stunde aus der Quelle mit dem größten Wert genommen, damit
-        nichts doppelt zählt. Der Punkt zeigt, wie vollständig die Daten des Tages sind. Die Nacht gehört zum Tag, an dem du aufwachst.
-        „Krank an diesem Tag“ bleibt nur in Helio und dient dem Rückblick der Frühzeichen auf der Seite Heute.
-      </p>
+      <details className="hint-i">
+        <summary>?</summary>
+        <p>
+          Je Kennzahl zählt eine Quelle; Schritte, Strecke, Energie und Essen werden je Stunde aus der Quelle mit dem größten Wert genommen, damit
+          nichts doppelt zählt. Der Punkt zeigt, wie vollständig die Daten des Tages sind. Die Nacht gehört zum Tag, an dem du aufwachst.
+          „Krank an diesem Tag“ bleibt nur in Helio und dient dem Rückblick der Frühzeichen auf der Seite Heute.
+        </p>
+      </details>
     </section>
   );
 }

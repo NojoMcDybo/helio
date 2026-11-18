@@ -1,3 +1,4 @@
+import { DivBar } from "./viz";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -120,6 +121,7 @@ function RecoveryChart({ list }: { list: Recovery[] }) {
 }
 
 const AFTER_LABEL: Record<string, [string, string, number]> = { rhr: ["Ruhepuls", "bpm", 1], hrv: ["HRV", "ms", 1] };
+const AFTER_MAX: Record<string, number> = { rhr: 6, hrv: 15 };
 
 export function Load() {
   const [view, setView] = useState<LoadView | null>(null);
@@ -148,34 +150,37 @@ export function Load() {
 
   return (
     <section className="days" aria-label="Belastung">
-      <article className="day-group n-card" data-g="move">
+      <article className="day-group n-card lg" data-g="move">
         <div className="n-eyebrow">Trainingslast · 90 Tage</div>
-        <p className="lead">
-          Fitness <b>{fmt(last.fitness)}</b> · Ermüdung <b>{fmt(last.fatigue)}</b> · Form <b>{signed(form)}</b>
-        </p>
-        <small className="fine">
-          {form < 0
-            ? "Die letzten 7 Tage waren belastender als die letzten 6 Wochen im Schnitt."
-            : "Die letzten 7 Tage waren weniger belastend als die letzten 6 Wochen im Schnitt."}
-        </small>
+        <div className="stat-row" title={form < 0 ? "Die letzten 7 Tage waren belastender als die letzten 6 Wochen im Schnitt." : "Die letzten 7 Tage waren weniger belastend als die letzten 6 Wochen im Schnitt."}>
+          <div className="stat"><span className="n-eyebrow">Fitness</span><b>{fmt(last.fitness)}</b></div>
+          <div className="stat"><span className="n-eyebrow">Ermüdung</span><b>{fmt(last.fatigue)}</b></div>
+          <div className="stat"><span className="n-eyebrow">Form</span><b>{signed(form)}</b></div>
+        </div>
+        <DivBar value={form} max={Math.max(20, Math.abs(form) * 1.5)} label={`Form ${signed(form)}: ${form < 0 ? "die letzten 7 Tage waren belastender" : "die letzten 7 Tage waren weniger belastend"} als die letzten 6 Wochen im Schnitt`} />
         <LoadChart days={view.days} />
       </article>
 
-      <article className="day-group n-card" data-g="heart">
-        <div className="n-eyebrow">Pulserholung · 60 s nach dem Training</div>
+      <article className="day-group n-card lg" data-g="heart">
+        <div className="n-eyebrow">Pulserholung · nach dem Training</div>
         {lastRec ? (
           <>
-            <p className="lead">
-              Zuletzt <b>−{fmt(lastRec.drop60)} bpm</b> nach 60 s{lastRec.drop120 != null && <> · −{fmt(lastRec.drop120)} nach 120 s</>}
-              <small> ({short(lastRec.day)}, ab {fmt(lastRec.hr_end)} bpm)</small>
-            </p>
-            {recent.length >= 3 && (
-              <small className="fine">
-                Median der letzten 4 Wochen −{fmt(median(recent))} bpm (n = {recent.length})
-                {before.length >= 3 ? `, 4 Wochen davor −${fmt(median(before))} bpm (n = ${before.length})` : ""}.
-              </small>
+            <div className="stat-row two" title={`Zuletzt ${short(lastRec.day)}, ab ${fmt(lastRec.hr_end)} bpm`}>
+              <div className="stat"><span className="n-eyebrow">nach 60 s</span><b>−{fmt(lastRec.drop60)}</b></div>
+              {lastRec.drop120 != null && <div className="stat"><span className="n-eyebrow">nach 120 s</span><b>−{fmt(lastRec.drop120)}</b></div>}
+            </div>
+            {recent.length >= 3 && before.length >= 3 && (
+              <DivBar value={median(recent) - median(before)} max={15}
+                label={`Median der letzten 4 Wochen −${fmt(median(recent))} bpm, 4 Wochen davor −${fmt(median(before))} bpm; rechts = stärkerer Abfall`} />
             )}
             {view.recoveries.length >= 2 && <RecoveryChart list={view.recoveries} />}
+            <details className="hint-i">
+              <summary>?</summary>
+              <p>
+                Pulsabfall in bpm nach Trainingsende{recent.length >= 3 ? `; Median der letzten 4 Wochen −${fmt(median(recent))} bpm (n = ${recent.length})` : ""}
+                {before.length >= 3 ? `, 4 Wochen davor −${fmt(median(before))} bpm (n = ${before.length}). Der Balken zeigt den Unterschied: rechts = stärkerer Abfall als davor` : ""}.
+              </p>
+            </details>
           </>
         ) : (
           <p className="fine">Noch keine Messung: gebraucht wird ein Training ab 10 min, am Ende über 60 % des Höchstpulses, und Puls in den 2 Minuten danach.</p>
@@ -183,28 +188,30 @@ export function Load() {
       </article>
 
       {view.hard != null && !!view.after.length && (
-        <article className="day-group n-card" data-g="move">
+        <article className="day-group n-card lg" data-g="move">
           <div className="n-eyebrow">Nach harten Tagen · 365 Tage</div>
-          <small className="fine">Hart = Trainingslast ab {fmt(view.hard)} (die oberen 20 % deiner Trainingstage). Abstand zu deinem Median der 60 Tage davor:</small>
-          <table>
-            <tbody>
-              {view.after.map((a) => {
-                const [label, unit, d] = AFTER_LABEL[a.key] ?? [a.key, "", 1];
-                const diff = a.mean - a.other_mean, clear = Number.isFinite(a.ci) && Math.abs(diff) > a.ci;
-                return (
-                  <tr key={`${a.key}${a.lag}`}>
-                    <td>{label}, {a.lag === 1 ? "Tag danach" : "2 Tage danach"}<small>n = {a.n}, übrige Tage {signed(a.other_mean, d)} {unit}</small></td>
-                    <td className="n-num">{signed(a.mean, d)} {unit}<small>± {fmt(a.ci, d)}</small></td>
-                    <td className="verdict">{clear ? (diff > 0 ? "höher als sonst" : "niedriger als sonst") : "kein deutlicher Unterschied"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="rows">
+            {view.after.map((a) => {
+              const [label, unit, d] = AFTER_LABEL[a.key] ?? [a.key, "", 1];
+              const diff = a.mean - a.other_mean, clear = Number.isFinite(a.ci) && Math.abs(diff) > a.ci;
+              const said = `${label}, ${a.lag === 1 ? "Tag danach" : "2 Tage danach"}: ${signed(a.mean, d)} ${unit} (übrige Tage ${signed(a.other_mean, d)}), ± ${fmt(a.ci, d)}, n = ${a.n}; ${clear ? (diff > 0 ? "höher als sonst" : "niedriger als sonst") : "kein deutlicher Unterschied"}`;
+              return (
+                <div className="row-viz" key={`${a.key}${a.lag}`} title={said}>
+                  <span>{label} · +{a.lag} T</span>
+                  <DivBar value={diff} max={AFTER_MAX[a.key] ?? 10} ci={a.ci} clear={clear} label={said} />
+                  <span>{signed(a.mean, d)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <details className="hint-i">
+            <summary>?</summary>
+            <p>Hart = Trainingslast ab {fmt(view.hard)} (die oberen 20 % deiner Trainingstage). Der Balken zeigt den Abstand zu deinem Median der 60 Tage davor, der Strich den 95-%-Bereich. Gefüllter Punkt = deutlicher Unterschied, hohler Punkt = kein deutlicher Unterschied.</p>
+          </details>
         </article>
       )}
       {error && <p className="fine warn" role="alert">{error}</p>}
-      <details className="more n-card">
+      <details className="more n-card lg">
         <summary>Wie wird gerechnet?</summary>
         <p className="fine">
           Trainingslast (Edwards-TRIMP): je Trainingsminute 1 bis 5 Punkte nach Pulszone (50–60 % bis über 90 % von 200 bpm, wie auf der Seite

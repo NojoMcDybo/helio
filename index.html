@@ -1,11 +1,14 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Helio</title>
+    <!-- Hell oder dunkel vor dem ersten Zeichnen: gemerkte Wahl, sonst Windows-Einstellung -->
+    <script>try{var t=localStorage.getItem("helio-theme");document.documentElement.dataset.theme=t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark")}catch(e){}</script>
     <link rel="stylesheet" href="/src/nojo/nojo-ui.css" />
     <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/plate.css" />
     <script type="module" src="/src/main.tsx" defer></script>
   </head>
   <body class="n-window">

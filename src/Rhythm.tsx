@@ -3,6 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { clock, dur, fmt } from "./metrics";
 import { gapPath, localDay, short, useWidth } from "./chart";
+import type { ReactNode } from "react";
+import { ArcGauge, ClockDial, HeatStrip } from "./viz";
 
 // Seite „Rhythmus“: Tagesprofil mit Kosinor, IS/IV, Schlafregelmäßigkeit (SRI), sozialer Jetlag (rhythm.rs).
 // Diagramme einfarbig in Tinte wie auf der Seite Belastung; Kacheln wie auf der Seite Heute.
@@ -104,22 +106,13 @@ function ClockChart({ weeks }: { weeks: Week[] }) {
   );
 }
 
-function Tile({ label, value, note, series, g }: { label: string; value: string; note: string; series?: (number | null)[]; g: string }) {
-  const vals = (series ?? []).filter((v): v is number => v != null);
-  const W = 140, Hs = 34, n = series?.length ?? 0;
-  const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.12 || 1;
-  const x = (i: number) => (i / Math.max(1, n - 1)) * W, y = (v: number) => Hs - ((v - lo + pad) / (hi - lo + 2 * pad)) * Hs;
-  const d = gapPath(series ?? [], x, y);
+function Tile({ label, value, note, series, g, viz }: { label: string; value: string; note: string; series?: (number | null)[]; g: string; viz?: ReactNode }) {
   return (
-    <div className="trend-tile" data-g={g}>
+    <div className="trend-tile lg" data-g={g} title={`${label}: ${value}. ${note}`}>
       <span className="n-eyebrow">{label}</span>
       <b>{value}</b>
-      {vals.length > 1 && (
-        <svg viewBox={`0 0 ${W} ${Hs}`} preserveAspectRatio="none" className="trend-spark" aria-hidden="true">
-          <path d={d} className="spark-line" />
-        </svg>
-      )}
-      <small>{note}</small>
+      {viz}
+      {series && <HeatStrip values={series} label={`${label}, Verlauf der letzten Wochen, dunkler = höher`} />}
     </div>
   );
 }
@@ -149,40 +142,48 @@ export function Rhythm() {
 
   return (
     <section className="days" aria-label="Rhythmus">
-      <article className="day-group n-card" data-g="move">
+      <article className="day-group n-card lg" data-g="move">
         <div className="n-eyebrow">Tagesprofil · 4 Wochen bis {short(view.to)}</div>
-        <p className="lead">
-          {now.steps ? <>Am meisten unterwegs gegen <b>{hourClock(now.steps.peak)}</b></> : "Zu wenig Schritte für eine Tageskurve"}
-          {now.hr && <> · Puls am höchsten gegen <b>{hourClock(now.hr.peak)}</b> <small>(Mittel {fmt(now.hr.mesor)} bpm, ± {fmt(now.hr.amp)} über den Tag)</small></>}
-        </p>
-        {now.steps && (
-          <small className="fine">Die Kurve erklärt {fmt(now.steps.r2 * 100)} % der Schwankung zwischen den Stunden ({now.days} Tage mit Schritten).</small>
+        {(now.steps || now.hr) && (
+          <div className="pair" title={now.steps ? `Die Kurve erklärt ${fmt(now.steps.r2 * 100)} % der Schwankung zwischen den Stunden (${now.days} Tage mit Schritten)${now.hr ? `; Puls im Mittel ${fmt(now.hr.mesor)} bpm, ± ${fmt(now.hr.amp)} über den Tag` : ""}` : undefined}>
+            <ClockDial label="Uhrzeit des Höchstwerts: Schritte und Puls"
+              dots={[...(now.steps ? [{ v: now.steps.peak * 60 }] : []), ...(now.hr ? [{ v: now.hr.peak * 60, kind: "alt" as const }] : [])]} />
+            <div className="pair-nums">
+              {now.steps && <div><span className="n-eyebrow">Schritte</span>{hourClock(now.steps.peak)}</div>}
+              {now.hr && <div><span className="n-eyebrow">Puls</span>{hourClock(now.hr.peak)}</div>}
+            </div>
+          </div>
         )}
         <ProfileChart profile={view.profile} fit={now.steps} />
       </article>
 
-      <article className="day-group n-card">
+      <article className="day-group group-bare">
         <div className="n-eyebrow">Regelmäßigkeit · 4 Wochen</div>
         <div className="trend-tiles">
           <Tile g="sleep" label="Schlafregelmäßigkeit (SRI)" value={now.sri != null ? fmt(now.sri) : "–"} series={weeks.map((k) => k.sri)}
+            viz={<ArcGauge min={0} max={100} value={now.sri} ghost={view.sri_before} label={`SRI ${now.sri != null ? fmt(now.sri) : "–"} von 100${view.sri_before != null ? `, 4 Wochen davor ${fmt(view.sri_before)}` : ""}`} />}
             note={now.sri == null ? "zu wenig erfasste Nächte" : view.sri_before != null ? `4 Wochen davor ${fmt(view.sri_before)} · 100 = jeden Tag gleich` : "100 = jeden Tag gleich"} />
           <Tile g="move" label="Gleichmaß zwischen Tagen (IS)" value={now.is != null ? fmt(now.is, 2) : "–"} series={weeks.map((k) => k.is)}
+            viz={<ArcGauge min={0} max={1} value={now.is} label={`IS ${now.is != null ? fmt(now.is, 2) : "–"} von 1`} />}
             note="0 bis 1 · 1 = jeder Tag mit gleichem Bewegungsmuster" />
           <Tile g="move" label="Wechsel innerhalb des Tages (IV)" value={now.iv != null ? fmt(now.iv, 2) : "–"} series={weeks.map((k) => k.iv)}
+            viz={<ArcGauge min={0} max={2} value={now.iv} label={`IV ${now.iv != null ? fmt(now.iv, 2) : "–"} von 2`} />}
             note="0 bis 2 · höher = häufiger Wechsel zwischen ruhig und aktiv" />
-          <Tile g="sleep" label="Sozialer Jetlag" value={!j ? "–" : Math.abs(diff) < 15 ? "kaum" : `${dur(Math.abs(diff))} ${diff > 0 ? "später" : "früher"}`}
+          <Tile g="sleep" label="Sozialer Jetlag" value={!j ? "–" : Math.abs(diff) < 15 ? "±0" : `${diff > 0 ? "+" : "−"}${dur(Math.abs(diff))}`}
+            viz={j && <ClockDial label={`Schlafmitte an freien Tagen ${clock(j.free)}, an Werktagen ${clock(j.work)}`}
+              spans={[{ from: Math.min(j.work, j.free), to: Math.max(j.work, j.free) }]} dots={[{ v: j.work }, { v: j.free, kind: "alt" }]} />}
             note={!j ? "zu wenig Nächte vor freien Tagen" : `Schlafmitte an freien Tagen ${clock(j.free)}, an Werktagen ${clock(j.work)} (${j.n_free} und ${j.n_work} Nächte)`} />
         </div>
       </article>
 
       {shown && (
-        <article className="day-group n-card" data-g="sleep">
+        <article className="day-group n-card lg" data-g="sleep">
           <div className="n-eyebrow">Uhrzeiten je Woche · {weeks.length} Wochen</div>
           <ClockChart weeks={weeks} />
         </article>
       )}
       {error && <p className="fine warn" role="alert">{error}</p>}
-      <details className="more n-card">
+      <details className="more n-card lg">
         <summary>Wie wird gerechnet?</summary>
         <p className="fine">
           Tageskurve (Kosinor): eine 24-Stunden-Welle, die am besten zu deinen Stundenwerten passt; daraus die Uhrzeit des Höchstwerts. IS und IV

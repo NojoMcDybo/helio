@@ -80,7 +80,7 @@ export function Ask() {
   if (!status.enabled) {
     return (
       <section className="days" aria-label="Fragen">
-        <article className="day-group n-card ask-intro">
+        <article className="day-group n-card lg ask-intro">
           <div className="n-eyebrow">Fragen an Claude</div>
           <p>Stell Fragen zu deinen Werten in eigenen Worten. Claude fragt dafür Helios Auswertungen ab und antwortet mit Zahlen.</p>
           <ul>
@@ -100,7 +100,7 @@ export function Ask() {
   return (
     <section className="days ask" aria-label="Fragen">
       {!msgs.length && (
-        <article className="day-group n-card">
+        <article className="day-group n-card lg">
           <div className="n-eyebrow">Fragen an Claude</div>
           <small className="fine">Zum Beispiel:</small>
           <div className="ask-ideas">{IDEAS.map((q) => <button key={q} className="n-btn" onClick={() => ask(q)} disabled={busy}>{q}</button>)}</div>
@@ -110,7 +110,7 @@ export function Ask() {
         {msgs.map((m, i) => m.role === "user" ? (
           <p key={i} className="ask-q">{m.text}</p>
         ) : (
-          <article key={i} className="day-group n-card ask-a">
+          <article key={i} className="day-group n-card lg ask-a">
             {m.tools.length > 0 && (
               <div className="ask-tools">{m.tools.map((t, k) => <span key={k}>Helio · {TOOL[t.name] ?? t.name}{t.input?.schluessel ? ` ${t.input.schluessel}` : ""}</span>)}</div>
             )}

@@ -42,7 +42,7 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 main {
   height: 100%;
   overflow-y: auto;
-  padding: 58px 18px 26px;
+  padding: 56px 132px 120px 34px;
 }
 
 /* ---------- Puls ---------- */
@@ -109,19 +109,6 @@ canvas { display: block; width: 100%; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; padding: 2px 6px; margin: -2px -6px; border-radius: 8px; transition: background 0.2s, color 0.2s; }
 .legend span:hover, .legend span.hot { background: rgba(255, 255, 255, 0.07); color: var(--fg); }
 .legend i { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
-
-/* ---------- Seiten (Pager aus Haze: aufgelegtes Blatt) ---------- */
-
-.page-tabs { width: max-content; max-width: 100%; margin: 0 auto 14px; overflow-x: auto; scrollbar-width: none; }
-.page-tabs > button { flex: none; padding: 6px 8px; }
-.pager { display: grid; overflow: hidden; margin: 0 -18px; touch-action: pan-y; transition: height 0.45s var(--n-spring); }
-.page { grid-area: 1 / 1; align-self: start; min-width: 0; padding: 2px 18px 26px; background: var(--bg); }
-.page + .page { border-radius: 26px 0 0 26px; box-shadow: -22px 0 54px rgba(0, 0, 0, 0.55); }
-:root[data-theme="light"] .page + .page { box-shadow: -22px 0 54px rgba(23, 32, 32, 0.16); }
-.page.snap { transition: transform 0.56s var(--n-spring), opacity 0.56s var(--n-spring), filter 0.56s var(--n-spring); }
-.page.snap, body.paging .page { will-change: transform, filter; }
-body.paging, body.paging * { cursor: grabbing !important; }
-@media (prefers-reduced-motion: reduce) { .pager, .page.snap { transition: none; } }
 
 /* ---------- Quellen ---------- */
 

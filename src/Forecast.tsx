@@ -109,7 +109,7 @@ export function ForecastCard() {
   };
 
   return (
-    <article className="day-group n-card">
+    <article className="day-group n-card lg">
       <div className="n-eyebrow">Prognose-Experiment · nicht belastbar</div>
       {!on ? (
         <>

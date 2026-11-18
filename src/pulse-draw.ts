@@ -9,12 +9,12 @@ import { ICONS } from "./nojo/nojo-ui";
 const HRMAX = 200;
 const LIVE_WINDOW = 5 * 60_000;
 const ZONES = [
-  { name: "Ruhe", color: "#3a3a40" },
-  { name: "Z1", color: "#6d8cff" },
-  { name: "Z2", color: "#4fc3f7" },
-  { name: "Z3", color: "#5ee38a" },
-  { name: "Z4", color: "#ffb547" },
-  { name: "Z5", color: "#ff5a6e" },
+  { name: "Ruhe", color: "#8a8896" },
+  { name: "Z1", color: "#b49bb4" },
+  { name: "Z2", color: "#8fa3d0" },
+  { name: "Z3", color: "#9aa56a" },
+  { name: "Z4", color: "#efa91f" },
+  { name: "Z5", color: "#c23a4d" },
 ];
 
 type Status = { state: string; device?: string | null; detail?: string | null };

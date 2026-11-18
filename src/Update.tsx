@@ -22,7 +22,7 @@ export function UpdateBanner() {
   if (s?.status !== "available" && s?.status !== "downloading") return null;
   const busy = s.status === "downloading";
   return (
-    <div className="update-banner n-card" role="status">
+    <div className="update-banner n-card lg" role="status">
       <span>{busy ? "Lädt … Helio startet gleich neu" : <>Helio <b>{s.version}</b> ist da <small>(installiert: {s.current})</small></>}</span>
       <button className="n-btn primary" disabled={busy} onClick={install}>{busy ? "…" : "Installieren"}</button>
     </div>
@@ -41,7 +41,7 @@ export function UpdateRow() {
     error: s?.message ?? "Prüfung fehlgeschlagen",
   }[st];
   return (
-    <article className="source-tile n-card">
+    <article className="source-tile n-card lg">
       <i className="source-dot" aria-hidden="true" />
       <div><b>Helio-Version</b><small className={st === "error" ? "warn" : ""}>{text}</small></div>
       <button className={"n-btn" + (st === "available" ? " primary" : "")} disabled={st === "checking" || st === "downloading"} onClick={st === "available" ? install : check}>

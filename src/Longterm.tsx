@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { METRIC, clock, dur, fmt } from "./metrics";
-import { gapPath, localDay, short, useWidth } from "./chart";
+import { localDay, short, useWidth } from "./chart";
 import { ForecastCard } from "./Forecast";
+import { DivBar, HeatStrip, StatusDots } from "./viz";
 
 // Seite „Langzeit“: Trends über 52 Wochen, Wendepunkte, Monatsmittel über alle Jahre, feste Fragen zu Zusammenhängen (longterm.rs).
 // Diagramme einfarbig in Tinte wie Belastung und Rhythmus; Aussagen wie in Haze Langzeit/Hinweise.
@@ -37,33 +38,21 @@ const X: Record<string, { title: string; none?: string; show: (v: number) => str
 };
 const when = (l: Link) => (l.lag === 1 ? "in der Nacht danach" : "am Tag danach");
 
-function Spark({ m }: { m: Metric }) {
-  const vals = m.weeks.filter((v): v is number => v != null);
-  if (vals.length < 2) return null;
-  const W = 140, H = 34, n = m.weeks.length, t = m.trend;
-  const line = t ? [0, n - 1].map((i) => t.intercept + t.slope * i) : [];
-  const lo = Math.min(...vals, ...line), hi = Math.max(...vals, ...line), pad = (hi - lo) * 0.12 || 1;
-  const x = (i: number) => (i / (n - 1)) * W, y = (v: number) => H - ((v - lo + pad) / (hi - lo + 2 * pad)) * H;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="trend-spark" aria-hidden="true">
-      <path d={gapPath(m.weeks, x, y)} className="spark-line" />
-      {t && t.status !== "kein klarer Trend" && <path d={`M0 ${y(line[0]).toFixed(1)}L${W} ${y(line[1]).toFixed(1)}`} className="spark-trend" />}
-    </svg>
-  );
-}
-
 function Tile({ m, active, onPick }: { m: Metric; active: boolean; onPick: () => void }) {
   const label = METRIC.get(m.key)?.label ?? m.key, t = m.trend, c = m.changes[m.changes.length - 1];
+  const clear = !!t && t.status !== "kein klarer Trend";
   const text = !t ? "zu wenige Wochen für einen Trend"
-    : t.status === "kein klarer Trend" ? "kein klarer Trend"
+    : !clear ? "kein klarer Trend"
     : `${t.status}: ${delta(m.key, t.change)} in ${t.n} Wochen`;
+  const said = `${label}: ${text}${c ? ` · Wendepunkt ${short(c.day)}: ${show(m.key, c.before)} → ${show(m.key, c.after)}` : ""}`;
   return (
-    <button type="button" className={"trend-tile long-tile" + (t && t.status !== "kein klarer Trend" ? " off" : "") + (active ? " picked" : "")}
-      aria-pressed={active} onClick={onPick} data-g={METRIC.get(m.key)?.g}>
+    <button type="button" className={"trend-tile long-tile lg" + (clear ? " off" : "") + (active ? " picked" : "")}
+      aria-pressed={active} onClick={onPick} data-g={METRIC.get(m.key)?.g} title={said}>
       <span className="n-eyebrow">{label}</span>
       <b>{m.now != null ? show(m.key, m.now) : "–"}</b>
-      <Spark m={m} />
-      <small>{text}{c ? ` · Wendepunkt ${short(c.day)}: ${show(m.key, c.before)} → ${show(m.key, c.after)}` : ""}</small>
+      {clear && <em className={"dir " + (t!.change > 0 ? "up" : "down")} aria-hidden="true">{t!.change > 0 ? "↑" : "↓"}</em>}
+      <HeatStrip values={m.weeks} label={`${said}; 52 Wochen, dunkler = höher`} />
+      {clear && <span className="tile-delta">{delta(m.key, t!.change)}</span>}
     </button>
   );
 }
@@ -114,22 +103,20 @@ function MonthChart({ m }: { m: Metric }) {
 function LinkRow({ l }: { l: Link }) {
   const X0 = X[l.x], y = METRIC.get(l.y)?.label ?? l.y, yv = (v: number | null) => (v == null ? "–" : show(l.y, v));
   const title = `${X0?.title ?? l.x} → ${y} ${when(l)}`;
-  if (l.status === "zu wenige Daten") return <tr><td>{title}</td><td className="verdict">zu wenige Tage (n = {l.n})</td></tr>;
+  if (l.status === "zu wenige Daten") return <div className="link-row weak" title={`zu wenige Tage (n = ${l.n})`}><span>{title}</span><span className="viz-empty" aria-hidden="true">–</span><span /></div>;
   const groups = l.zero
     ? `${X0?.none ?? "ohne"}: ${yv(l.low_median)}, mit (ab ${X0?.show(l.high_min ?? 0)}): ${yv(l.high_median)}`
     : `unteres Drittel (bis ${X0?.show(l.low_max ?? 0)}): ${yv(l.low_median)}, oberes (ab ${X0?.show(l.high_min ?? 0)}): ${yv(l.high_median)}`;
   const found = l.status === "Zusammenhang";
+  const verdict = found ? (Math.abs(l.rho ?? 0) >= 0.5 ? "deutlicher Zusammenhang" : "mäßiger Zusammenhang") : "kein deutlicher Zusammenhang";
+  const sure = found ? (l.confirmed == null ? "zu wenige neue Tage zum Bestätigen" : l.confirmed ? "auch in den neuesten Tagen" : "in den neuesten Tagen nicht bestätigt") : "";
+  const said = `${title}: ${verdict}${sure ? `, ${sure}` : ""} · Median ${y} ${groups} · ρ = ${fmt(l.rho ?? 0, 2)}, n = ${l.n} Tage`;
   return (
-    <tr className={found ? "found" : ""}>
-      <td>
-        {title}
-        <small>Median {y} {groups} · ρ = {fmt(l.rho ?? 0, 2)}, n = {l.n} Tage</small>
-      </td>
-      <td className="verdict">
-        {found ? (Math.abs(l.rho ?? 0) >= 0.5 ? "deutlicher Zusammenhang" : "mäßiger Zusammenhang") : "kein deutlicher Zusammenhang"}
-        {found && <small>{l.confirmed == null ? "zu wenige neue Tage zum Bestätigen" : l.confirmed ? "auch in den neuesten Tagen" : "in den neuesten Tagen nicht bestätigt"}</small>}
-      </td>
-    </tr>
+    <div className={"link-row" + (found ? " found" : "")} title={said}>
+      <span>{title}</span>
+      <DivBar value={l.rho ?? 0} max={1} clear={found} label={said} />
+      <span aria-hidden="true">{found ? (l.confirmed ? "✓" : "·") : ""}</span>
+    </div>
   );
 }
 
@@ -160,36 +147,41 @@ export function Longterm() {
 
   return (
     <section className="days" aria-label="Langzeit">
-      <p className="today-sum" role="status">
-        {moving.length
-          ? <>Klarer Trend im letzten Jahr: {moving.map((m, i) => <span key={m.key}>{i ? ", " : ""}<b>{METRIC.get(m.key)?.label}</b> {m.trend!.status}</span>)}.</>
-          : "Im letzten Jahr kein klarer Trend."}
-      </p>
-      <article className="day-group n-card">
+      <div className="today-head" role="status" aria-label={moving.length ? `Klarer Trend im letzten Jahr: ${moving.map((m) => `${METRIC.get(m.key)?.label} ${m.trend!.status}`).join(", ")}` : "Im letzten Jahr kein klarer Trend"}>
+        <div className="today-count">{moving.length}<small>/{shown.length}</small></div>
+        <StatusDots label="Eine Marke je Kennzahl, gefüllt = klarer Trend im letzten Jahr" items={shown.map((m) => moving.includes(m))} />
+      </div>
+      <article className="day-group group-bare">
         <div className="n-eyebrow">Trends · 52 Wochen bis {short(view.to)}</div>
-        <small className="fine">Groß: Mittel der letzten 4 Wochen. Linie: Wochenmittel, gestrichelt der Trend, wo er klar ist. Antippen zeigt die Monate.</small>
         <div className="trend-tiles">{shown.map((m) => <Tile key={m.key} m={m} active={m.key === sel?.key} onPick={() => setPick(m.key)} />)}</div>
+        <details className="hint-i">
+          <summary>?</summary>
+          <p>Groß: Mittel der letzten 4 Wochen. Streifen: ein Feld je Woche, dunkler = höher. Pfeil: klarer Trend im letzten Jahr. Antippen zeigt die Monate.</p>
+        </details>
       </article>
 
       {sel && (
-        <article className="day-group n-card">
+        <article className="day-group n-card lg">
           <div className="n-eyebrow">{METRIC.get(sel.key)?.label} · Monate seit {monthLabel(sel.months[0][0])}</div>
           <MonthChart m={sel} />
         </article>
       )}
 
-      <article className="day-group n-card">
+      <article className="day-group n-card lg">
         <div className="n-eyebrow">Zusammenhänge · feste Fragen</div>
-        <small className="fine">
-          {found.length ? `${found.length} von ${view.links.length} Fragen zeigen einen Zusammenhang.` : `Keine der ${view.links.length} Fragen zeigt in deinen Daten einen deutlichen Zusammenhang.`}
-        </small>
-        <table className="links">
-          <tbody>{view.links.map((l) => <LinkRow key={`${l.x}${l.y}${l.lag}`} l={l} />)}</tbody>
-        </table>
+        <div className="today-head">
+          <div className="today-count">{found.length}<small>/{view.links.length}</small></div>
+          <StatusDots label="Eine Marke je Frage, gefüllt = Zusammenhang" items={view.links.map((l) => l.status === "Zusammenhang")} />
+        </div>
+        <div className="rows links">{view.links.map((l) => <LinkRow key={`${l.x}${l.y}${l.lag}`} l={l} />)}</div>
+        <details className="hint-i">
+          <summary>?</summary>
+          <p>Je Frage ein Balken: Stärke des Zusammenhangs (ρ), rechts gleichläufig, links gegenläufig. Gefüllter Punkt = deutlich (ab |ρ| 0,3), ✓ = auch in den neuesten Tagen zu sehen. Zusammen auftreten heißt nicht verursachen.</p>
+        </details>
       </article>
       <ForecastCard />
       {error && <p className="fine warn" role="alert">{error}</p>}
-      <details className="more n-card">
+      <details className="more n-card lg">
         <summary>Wie wird gerechnet?</summary>
         <p className="fine">
           Trend: Steigung über die Wochenmittel der letzten 52 Wochen (Theil-Sen, robust gegen Ausreißer), geprüft mit Mann-Kendall und über alle
